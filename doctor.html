@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Doctor — Mushtaq Dental Clinic Bookings</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f2f8f8; color: #17323a; line-height: 1.55; }
+  .topbar { position: sticky; top: 0; z-index: 50; background: #065a60; color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; box-shadow: 0 2px 8px rgba(0,0,0,.18); }
+  .topbar .brand { font-weight: 800; font-size: 17px; letter-spacing: .3px; }
+  .topbar .brand small { display: block; font-weight: 400; font-size: 12px; opacity: .85; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 14px 40px; }
+  .card { background: #fff; border-radius: 14px; padding: 18px; margin-top: 18px; box-shadow: 0 2px 10px rgba(6,90,96,.08); }
+  .card h2 { color: #065a60; font-size: 20px; margin-bottom: 12px; }
+  label { display: block; font-weight: 600; font-size: 14px; margin: 12px 0 5px; color: #23424c; }
+  input { width: 100%; padding: 11px 12px; border: 1.5px solid #c4dcdc; border-radius: 10px; font-size: 15px; font-family: inherit; background: #fbfefe; }
+  input:focus { outline: none; border-color: #0b7285; background: #fff; }
+  .submit { width: 100%; margin-top: 18px; background: #065a60; color: #fff; border: none; font-size: 16px; font-weight: 800; padding: 14px; border-radius: 999px; cursor: pointer; }
+  .submit:active { opacity: .85; }
+  .err { color: #b02a2a; font-size: 14px; margin-top: 10px; min-height: 18px; font-weight: 600; }
+  .note { font-size: 13px; color: #5a7680; margin-top: 10px; }
+  .warn { background: #fff4e0; border: 1px solid #f0d9a8; color: #7a5b12; border-radius: 14px; padding: 14px 18px; margin-top: 18px; font-size: 14px; }
+  .total { font-weight: 800; color: #065a60; font-size: 16px; margin: 14px 0 8px; }
+  .brow { display: flex; gap: 12px; border: 1px solid #d7eaea; background: #fbfefe; border-radius: 12px; padding: 12px; margin-top: 10px; }
+  .brow.dim { opacity: .55; }
+  .btoken { font-size: 22px; font-weight: 800; color: #065a60; background: #eef7f7; border-radius: 10px; padding: 8px 10px; height: fit-content; white-space: nowrap; }
+  .bmain { flex: 1; min-width: 0; }
+  .bname { font-weight: 700; font-size: 16px; color: #17323a; }
+  .bmeta { font-size: 14px; color: #44606a; margin-top: 2px; word-wrap: break-word; }
+  .st { font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 999px; margin-left: 6px; vertical-align: middle; }
+  .st-done { background: #e2f4e5; color: #1d7a34; }
+  .st-cancel { background: #fbe3e3; color: #b02a2a; }
+  .bactions { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .callmini { background: #25d366; color: #07332f; text-decoration: none; font-weight: 700; font-size: 13px; padding: 7px 12px; border-radius: 999px; }
+  .act { border: none; font-weight: 700; font-size: 13px; padding: 7px 12px; border-radius: 999px; cursor: pointer; }
+  .act.done { background: #e2f4e5; color: #1d7a34; }
+  .act.cancel { background: #fbe3e3; color: #b02a2a; }
+  select { width: 100%; padding: 11px 12px; border: 1.5px solid #c4dcdc; border-radius: 10px; font-size: 15px; font-family: inherit; background: #fbfefe; }
+  select:focus { outline: none; border-color: #0b7285; background: #fff; }
+  .sub { margin-top: 24px; border-top: 1px solid #eef4f4; padding-top: 16px; }
+  .sub h3 { color: #065a60; font-size: 16px; margin-bottom: 4px; }
+  .btn2 { background: #065a60; color: #fff; border: none; font-weight: 700; font-size: 14px; padding: 10px 18px; border-radius: 999px; cursor: pointer; margin-top: 10px; }
+  .btn2:active { opacity: .85; }
+  .btn2.alt { background: #fbe3e3; color: #b02a2a; }
+  .btnrow2 { display: flex; gap: 8px; flex-wrap: wrap; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .trow { display: flex; justify-content: space-between; align-items: center; gap: 10px; border: 1px solid #d7eaea; background: #fbfefe; border-radius: 10px; padding: 9px 12px; margin-top: 8px; }
+  .trow .tn { font-weight: 600; }
+  .trow .tu { color: #5a7680; font-size: 13px; }
+  .thumbs { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+  .thumb { text-align: center; }
+  .thumb img { width: 96px; height: 96px; object-fit: cover; border-radius: 10px; display: block; margin-bottom: 6px; }
+  .okmsg { color: #1d7a34; font-size: 14px; margin-top: 10px; min-height: 18px; font-weight: 600; }
+  .setupinfo code { background: #eef7f7; padding: 2px 6px; border-radius: 6px; font-size: 13px; word-break: break-all; }
+  .setupinfo .lbl { font-weight: 700; color: #065a60; }
+  footer { text-align: center; color: #7b97a0; font-size: 13px; padding: 22px 10px 8px; }
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">🦷 MUSHTAQ DENTAL CLINIC<small>Doctor · Bookings List</small></div>
+</div>
+
+<div class="wrap">
+
+  <div class="warn" id="configWarn" style="display:none;">
+    ⚠️ <b>Setup pending:</b> Firebase config abhi placeholder hai. Pehle <b>SETUP-STEPS.md</b> ke steps mukammal karein — us ke baghair bookings nazar nahi ayengi.
+  </div>
+
+  <div class="card" id="pinGate">
+    <h2>🔒 Doctor Login — ڈاکٹر لاگ ان</h2>
+    <div id="pinLoading" class="note">Loading…</div>
+
+    <div id="pinUnlock" style="display:none;">
+      <label for="pinInput">PIN — پن کوڈ</label>
+      <input id="pinInput" type="password" inputmode="numeric" autocomplete="off" placeholder="••••">
+      <button class="submit" id="pinBtn" type="button">🔓 Unlock — کھولیں</button>
+      <div class="err" id="pinErr"></div>
+    </div>
+
+    <div id="pinSetup" style="display:none;">
+      <p class="note">Pehli dafa apna PIN set karein. Ye PIN is page ko is phone pe lock rakhega. PIN bhool jayein to ghabrane ki baat nahi — Firebase console se <b>config/doctorPinHash</b> delete kar dein, page dobara naya PIN set karne ko kahega.</p>
+      <label for="pinNew">New PIN — نیا پن (kam az kam 4 number)</label>
+      <input id="pinNew" type="password" inputmode="numeric" autocomplete="off" placeholder="••••">
+      <label for="pinNew2">PIN again — دوبارہ لکھیں</label>
+      <input id="pinNew2" type="password" inputmode="numeric" autocomplete="off" placeholder="••••">
+      <button class="submit" id="pinSetBtn" type="button">Set PIN — محفوظ کریں</button>
+      <div class="err" id="pinSetupErr"></div>
+    </div>
+  </div>
+
+  <div class="card" id="mainPanel" style="display:none;">
+    <h2>📋 Bookings — بکنگ لسٹ</h2>
+    <label for="datePick">Date — تاریخ</label>
+    <input id="datePick" type="date">
+    <div class="total" id="totalCount">Total bookings: 0</div>
+    <div id="bookList"></div>
+    <div class="note" id="bookEmpty">Is date ki koi booking nahi hai.</div>
+  </div>
+
+  <div class="card" id="editPanel" style="display:none;">
+    <h2>🛠️ Website Edit — ویب سائٹ بدلیں</h2>
+    <p class="note">Jo tabdeeli yahan karein ge wo website pe chand seconds me nazar aa jayegi. (Changes appear on the website within seconds.)</p>
+    <div class="okmsg" id="edMsg"></div>
+
+    <div class="sub">
+      <h3>📢 Notice — اعلان</h3>
+      <label for="edNotice">Notice text — اعلان لکھیں</label>
+      <input id="edNotice" type="text" placeholder="e.g. Kal clinic band rahega">
+      <div class="btnrow2">
+        <button class="btn2" id="edNoticeSave" type="button">Save Notice</button>
+        <button class="btn2 alt" id="edNoticeRemove" type="button">Remove Notice</button>
+      </div>
+    </div>
+
+    <div class="sub">
+      <h3>🕗 Timings — اوقات</h3>
+      <div class="row2">
+        <div>
+          <label for="edOpen">Open — کھلنے کا وقت</label>
+          <input id="edOpen" type="time">
+        </div>
+        <div>
+          <label for="edClose">Close — بند ہونے کا وقت</label>
+          <input id="edClose" type="time">
+        </div>
+      </div>
+      <label for="edClosedDay">Weekly off — ہفتہ وار چھٹی</label>
+      <select id="edClosedDay">
+        <option value="0">Sunday</option>
+        <option value="1">Monday</option>
+        <option value="2">Tuesday</option>
+        <option value="3">Wednesday</option>
+        <option value="4">Thursday</option>
+        <option value="5">Friday</option>
+        <option value="6">Saturday</option>
+      </select>
+      <button class="btn2" id="edTimingsSave" type="button">Save Timings</button>
+    </div>
+
+    <div class="sub">
+      <h3>🦷 Treatments — علاج</h3>
+      <div id="edTreatList"></div>
+      <label for="edTreatEn">New treatment — English name</label>
+      <input id="edTreatEn" type="text" placeholder="e.g. Root Canal">
+      <label for="edTreatUr">New treatment — Urdu name</label>
+      <input id="edTreatUr" type="text" placeholder="e.g. روٹ کنال">
+      <button class="btn2" id="edTreatAdd" type="button">Add Treatment</button>
+    </div>
+
+    <div class="sub">
+      <h3>📷 Gallery — تصاویر</h3>
+      <div class="thumbs" id="edGallery"></div>
+      <label for="edPhotoFile">Add photo — تصویر شامل کریں (zyada se zyada 6)</label>
+      <input id="edPhotoFile" type="file" accept="image/*">
+      <p class="note">Photo khud chhoti (compress) ho ke save hoti hai. Design ya sab se upar wali main photo badalna ho to developer se kahein.</p>
+    </div>
+  </div>
+
+  <div class="card setupinfo">
+    <h2 style="font-size:16px;">Setup info</h2>
+    <div><span class="lbl">Doctor UID:</span> <code id="uidBox">signing in…</code></div>
+    <p class="note">Ye UID Firebase rules me <b>__DOCTOR_UID__</b> ki jagah lagti hai (SETUP-STEPS.md, step 7). Doctor page hamesha <b>isi phone aur isi browser</b> se kholein — browser ka data clear karne ya dusra browser istemal karne se nayi UID ban jayegi; aisa ho to nayi UID dobara rules me dalni hogi.</p>
+  </div>
+
+  <footer>© 2026 Mushtaq Dental Clinic · Doctor page — private</footer>
+
+</div>
+
+<script>
+/* =====================================================================
+   Mushtaq Dental Clinic — doctor's private bookings page (v2)
+   NOTE on the PIN: the PIN is only a SCREEN LOCK for this page on the
+   doctor's phone — it keeps casual eyes out. It is NOT what protects
+   the data. Real protection is the database rule that only the
+   doctor's own UID (auth.uid) may read bookings or change statuses
+   (see firebase-rules.json). Someone without the doctor's signed-in
+   browser cannot read the list even if they guess the PIN.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   SETUP: replace with Dr Mushtaq's Firebase project config
+   (must be the SAME config as in index.html)
+   --------------------------------------------------------------------- */
+var FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAvPC7Km8YlTEd9X-cT20X1TbJaEo15Vhk",
+  authDomain: "mushtaq-dental-clinic.firebaseapp.com",
+  databaseURL: "https://mushtaq-dental-clinic-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "mushtaq-dental-clinic",
+  storageBucket: "mushtaq-dental-clinic.firebasestorage.app",
+  messagingSenderId: "706325827944",
+  appId: "1:706325827944:web:2fc2c6a49b92ca85b846dd"
+};
+
+/* === PURE LOGIC START === */
+function isoDate(d) {
+  var m = String(d.getMonth() + 1).padStart(2, '0');
+  var day = String(d.getDate()).padStart(2, '0');
+  return d.getFullYear() + '-' + m + '-' + day;
+}
+
+function isConfigReady(cfg) {
+  return !!(cfg && cfg.apiKey && String(cfg.apiKey).indexOf('PLACEHOLDER') === -1);
+}
+
+/* Doctor list ordering: lowest token first. Bookings without a
+   token (should not happen) go last. */
+function sortBookingsByToken(list) {
+  return list.slice().sort(function (a, b) {
+    var ta = (a && a.token != null) ? a.token : 999999;
+    var tb = (b && b.token != null) ? b.token : 999999;
+    return ta - tb;
+  });
+}
+
+/* Escape patient-typed text before it goes into the page HTML. */
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/* Compact SHA-256 (hex) — used only for the PIN screen lock.
+   The PIN itself is never stored; only this hash is, at
+   config/doctorPinHash in the database. */
+function sha256Hex(input) {
+  function rr(v, a) { return (v >>> a) | (v << (32 - a)); }
+  var maxWord = Math.pow(2, 32);
+  var ascii = unescape(encodeURIComponent(String(input)));
+  var words = [], bitLen = ascii.length * 8, i, j;
+  var hash = sha256Hex.h = sha256Hex.h || [];
+  var k = sha256Hex.k = sha256Hex.k || [];
+  var primeCounter = k.length, isComposite = {};
+  for (var candidate = 2; primeCounter < 64; candidate++) {
+    if (!isComposite[candidate]) {
+      for (i = 0; i < 313; i += candidate) { isComposite[i] = candidate; }
+      hash[primeCounter] = (Math.pow(candidate, 0.5) * maxWord) | 0;
+      k[primeCounter++] = (Math.pow(candidate, 1 / 3) * maxWord) | 0;
+    }
+  }
+  ascii += '\x80';
+  while (ascii.length % 64 - 56) { ascii += '\x00'; }
+  for (i = 0; i < ascii.length; i++) {
+    words[i >> 2] |= ascii.charCodeAt(i) << ((3 - i) % 4) * 8;
+  }
+  words[words.length] = (bitLen / maxWord) | 0;
+  words[words.length] = bitLen;
+  var result = '';
+  for (j = 0; j < words.length;) {
+    var w = words.slice(j, j += 16), oldHash = hash;
+    hash = hash.slice(0, 8);
+    for (i = 0; i < 64; i++) {
+      var w15 = w[i - 15], w2 = w[i - 2], a = hash[0], e = hash[4];
+      var temp1 = hash[7]
+        + (rr(e, 6) ^ rr(e, 11) ^ rr(e, 25))
+        + ((e & hash[5]) ^ ((~e) & hash[6]))
+        + k[i]
+        + (w[i] = (i < 16) ? w[i] : (
+            w[i - 16]
+            + (rr(w15, 7) ^ rr(w15, 18) ^ (w15 >>> 3))
+            + w[i - 7]
+            + (rr(w2, 17) ^ rr(w2, 19) ^ (w2 >>> 10))
+          ) | 0);
+      var temp2 = (rr(a, 2) ^ rr(a, 13) ^ rr(a, 22))
+        + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+      hash = [(temp1 + temp2) | 0].concat(hash);
+      hash[4] = (hash[4] + temp1) | 0;
+    }
+    for (i = 0; i < 8; i++) { hash[i] = (hash[i] + oldHash[i]) | 0; }
+  }
+  for (i = 0; i < 8; i++) {
+    for (j = 3; j + 1; j--) {
+      var b = (hash[i] >> (j * 8)) & 255;
+      result += (b < 16 ? '0' : '') + b.toString(16);
+    }
+  }
+  return result;
+}
+
+/* ---------------------------------------------------------------------
+   Clinic content the doctor edits from this page (stored in Firebase
+   at clinicInfo, read by the patient website). These defaults are
+   IDENTICAL to the ones in index.html — what the site ships with.
+   The first time this section is opened and no clinicInfo exists yet,
+   these defaults are written to the database as the starting point.
+   --------------------------------------------------------------------- */
+var MAX_GALLERY_PHOTOS = 6;
+var DEFAULT_CLINIC_INFO = {
+  notice: '',
+  openTime: '08:00',
+  closeTime: '14:00',
+  closedDay: 0,
+  treatments: [
+    { en: 'Filling', ur: 'دانتوں کی فلنگ' },
+    { en: 'Crown', ur: 'کراؤن' },
+    { en: 'Fixed Teeth', ur: 'دانت فکس کرنا' },
+    { en: 'Complete Denture', ur: 'مکمل دانت' },
+    { en: 'Partial Denture', ur: 'پارشیل دانت' },
+    { en: 'Zirconium Teeth', ur: 'زرکونیم دانت' },
+    { en: '3D Teeth', ur: '3D دانت' },
+    { en: 'Checkup & Advice', ur: 'معائنہ اور مشورہ' }
+  ],
+  gallery: []
+};
+
+function cloneTreatments(list) {
+  return list.map(function (t) {
+    return { en: String((t && t.en) || ''), ur: String((t && t.ur) || '') };
+  });
+}
+
+/* Firebase sometimes hands arrays back as objects with numeric keys;
+   normalise both shapes to a real array (or null when unusable). */
+function toArray(v) {
+  if (!v) return null;
+  if (Object.prototype.toString.call(v) === '[object Array]') return v;
+  if (typeof v === 'object') {
+    var keys = Object.keys(v);
+    var sequential = keys.length > 0 && keys.every(function (k) {
+      var n = Number(k);
+      return String(n) === k && n >= 0 && n < keys.length;
+    });
+    if (sequential) {
+      return keys.sort(function (a, b) { return Number(a) - Number(b); })
+        .map(function (k) { return v[k]; });
+    }
+  }
+  return null;
+}
+
+/* Merge stored clinicInfo over the defaults, field by field — the
+   same logic as the patient page, so both sides agree. */
+function mergeClinicInfo(raw) {
+  var out = {
+    notice: DEFAULT_CLINIC_INFO.notice,
+    openTime: DEFAULT_CLINIC_INFO.openTime,
+    closeTime: DEFAULT_CLINIC_INFO.closeTime,
+    closedDay: DEFAULT_CLINIC_INFO.closedDay,
+    treatments: cloneTreatments(DEFAULT_CLINIC_INFO.treatments),
+    gallery: []
+  };
+  if (!raw || typeof raw !== 'object') return out;
+  if (typeof raw.notice === 'string') out.notice = raw.notice;
+  if (typeof raw.openTime === 'string' && /^\d{2}:\d{2}$/.test(raw.openTime)) out.openTime = raw.openTime;
+  if (typeof raw.closeTime === 'string' && /^\d{2}:\d{2}$/.test(raw.closeTime)) out.closeTime = raw.closeTime;
+  if (typeof raw.closedDay === 'number' && raw.closedDay >= 0 && raw.closedDay <= 6) out.closedDay = raw.closedDay;
+  var tr = toArray(raw.treatments);
+  if (tr && tr.length) out.treatments = cloneTreatments(tr);
+  var gal = toArray(raw.gallery);
+  if (gal) out.gallery = gal.filter(function (g) { return typeof g === 'string'; });
+  return out;
+}
+
+/* Gallery holds at most MAX_GALLERY_PHOTOS photos. */
+function canAddPhoto(currentCount) {
+  return (typeof currentCount === 'number' ? currentCount : 0) < MAX_GALLERY_PHOTOS;
+}
+/* === PURE LOGIC END === */
+
+/* ------------------------------ Wiring ------------------------------ */
+var db = null;
+var storedPinHash = null;
+var currentRef = null;
+var currentDate = '';
+var clinicInfoState = null;   /* merged clinicInfo (defaults until loaded) */
+var clinicStarted = false;
+var clinicSeedTried = false;
+
+var $ = function (id) { return document.getElementById(id); };
+
+function showPinMode() {
+  $('pinLoading').style.display = 'none';
+  $('pinUnlock').style.display = storedPinHash ? 'block' : 'none';
+  $('pinSetup').style.display = storedPinHash ? 'none' : 'block';
+}
+
+function loadPinHash() {
+  db.ref('config/doctorPinHash').once('value')
+    .then(function (snap) {
+      storedPinHash = snap.val();
+      showPinMode();
+    })
+    .catch(function () {
+      $('pinLoading').textContent = 'Database se rabta nahi ho saka. Agar setup abhi chal raha hai to pehle rules publish karein (SETUP-STEPS.md step 7), phir page refresh karein.';
+    });
+}
+
+function unlock() {
+  $('pinGate').style.display = 'none';
+  $('mainPanel').style.display = 'block';
+  $('editPanel').style.display = 'block';
+  var picker = $('datePick');
+  picker.value = isoDate(new Date());
+  attach(picker.value);
+  startClinicInfo();
+}
+
+function attach(dateVal) {
+  currentDate = dateVal;
+  if (currentRef) { currentRef.off(); }
+  currentRef = db.ref('bookings/' + dateVal);
+  currentRef.on('value', render, function () {
+    $('totalCount').textContent = 'Total bookings: —';
+    $('bookList').innerHTML = '';
+    $('bookEmpty').textContent = 'Bookings load nahi ho sakin — internet ya permissions check karein.';
+    $('bookEmpty').style.display = 'block';
+  });
+}
+
+function rowHtml(b) {
+  var status = b.status || 'booked';
+  var dim = (status === 'done' || status === 'cancelled') ? ' dim' : '';
+  var label = '';
+  if (status === 'done') label = '<span class="st st-done">✔ Done</span>';
+  if (status === 'cancelled') label = '<span class="st st-cancel">✖ Cancelled</span>';
+  var actions = '<a class="callmini" href="tel:' + escapeHtml(b.mobile) + '">📞 ' + escapeHtml(b.mobile) + '</a>';
+  if (status === 'booked') {
+    actions += '<button class="act done" type="button" data-act="done" data-id="' + escapeHtml(b.id) + '">✔ Done</button>';
+    actions += '<button class="act cancel" type="button" data-act="cancelled" data-id="' + escapeHtml(b.id) + '">✖ Cancel</button>';
+  }
+  var note = b.note ? '<div class="bmeta">📝 ' + escapeHtml(b.note) + '</div>' : '';
+  return '<div class="brow' + dim + '">'
+    + '<div class="btoken">🎟️ ' + (b.token != null ? b.token : '–') + '</div>'
+    + '<div class="bmain">'
+    + '<div class="bname">' + escapeHtml(b.name) + label + '</div>'
+    + '<div class="bmeta">🕗 ' + escapeHtml(b.time) + ' · ' + escapeHtml(b.treatment) + '</div>'
+    + note
+    + '<div class="bactions">' + actions + '</div>'
+    + '</div></div>';
+}
+
+function render(snap) {
+  var obj = snap.val() || {};
+  var list = Object.keys(obj).map(function (key) {
+    var b = obj[key] || {};
+    b.id = key;
+    return b;
+  });
+  var sorted = sortBookingsByToken(list);
+  $('totalCount').textContent = 'Total bookings: ' + sorted.length;
+  $('bookEmpty').style.display = sorted.length ? 'none' : 'block';
+  if (sorted.length) { $('bookEmpty').textContent = 'Is date ki koi booking nahi hai.'; }
+  $('bookList').innerHTML = sorted.map(rowHtml).join('');
+}
+
+/* ------------------------- Website Edit ------------------------- */
+function edSay(msg, isErr) {
+  var el = $('edMsg');
+  el.textContent = msg;
+  el.style.color = isErr ? '#b02a2a' : '#1d7a34';
+}
+
+/* Live clinicInfo listener. First run: if the node does not exist
+   yet, seed it with the current website content (the defaults) so
+   the doctor starts editing from what the site already shows. */
+function startClinicInfo() {
+  if (clinicStarted || !db) return;
+  clinicStarted = true;
+  db.ref('clinicInfo').on('value', function (snap) {
+    var val = snap.val();
+    if (val == null) {
+      clinicInfoState = mergeClinicInfo(null);
+      if (!clinicSeedTried) {
+        clinicSeedTried = true;
+        db.ref('clinicInfo').set(mergeClinicInfo(null))
+          .catch(function () {
+            edSay('Website ka maujooda content save nahi ho saka — rules publish hue hain ya nahi check karein.', true);
+          });
+      }
+    } else {
+      clinicInfoState = mergeClinicInfo(val);
+    }
+    renderEditControls();
+  }, function () {
+    edSay('Website Edit ka data load nahi ho saka — rules publish hue hain ya nahi check karein.', true);
+  });
+}
+
+function renderEditControls() {
+  if (!clinicInfoState) return;
+  var n = $('edNotice');
+  if (document.activeElement !== n) n.value = clinicInfoState.notice || '';
+  var o = $('edOpen'), c = $('edClose');
+  if (document.activeElement !== o) o.value = clinicInfoState.openTime;
+  if (document.activeElement !== c) c.value = clinicInfoState.closeTime;
+  $('edClosedDay').value = String(clinicInfoState.closedDay);
+
+  if (clinicInfoState.treatments.length) {
+    $('edTreatList').innerHTML = clinicInfoState.treatments.map(function (t, i) {
+      return '<div class="trow"><div><span class="tn">' + escapeHtml(t.en) + '</span>'
+        + ' <span class="tu">' + escapeHtml(t.ur) + '</span></div>'
+        + '<button class="act cancel" type="button" data-tdel="' + i + '">✖ Delete</button></div>';
+    }).join('');
+  } else {
+    $('edTreatList').innerHTML = '<p class="note">Abhi koi treatment nahi hai.</p>';
+  }
+
+  $('edGallery').innerHTML = clinicInfoState.gallery.map(function (src, i) {
+    return '<div class="thumb"><img src="' + escapeHtml(src) + '" alt="Clinic photo">'
+      + '<button class="act cancel" type="button" data-gdel="' + i + '">✖ Delete</button></div>';
+  }).join('');
+}
+
+/* Draw a picked photo onto a canvas at most maxW wide and export it
+   as a JPEG data URL — small enough to store in the database. */
+function compressImageToDataUrl(img, maxW, quality) {
+  var scale = Math.min(1, maxW / (img.width || maxW));
+  var w = Math.max(1, Math.round((img.width || maxW) * scale));
+  var h = Math.max(1, Math.round((img.height || maxW) * scale));
+  var canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+  return canvas.toDataURL('image/jpeg', quality);
+}
+
+function addPhotoFile(file) {
+  var reader = new FileReader();
+  reader.onload = function () {
+    var img = new Image();
+    img.onload = function () {
+      var url = compressImageToDataUrl(img, 800, 0.72);
+      if (url.length > 700000) url = compressImageToDataUrl(img, 640, 0.6);
+      if (url.length > 700000) {
+        edSay('Ye photo bohat bari hai — koi aur, chhoti photo chunein.', true);
+        return;
+      }
+      var gallery = clinicInfoState ? clinicInfoState.gallery.slice() : [];
+      if (!canAddPhoto(gallery.length)) {
+        edSay('Gallery full (6 photos) — pehle koi photo delete karein.', true);
+        return;
+      }
+      gallery.push(url);
+      db.ref('clinicInfo/gallery').set(gallery)
+        .then(function () { edSay('Photo gallery me shamil ho gayi — website pe nazar aayegi.'); })
+        .catch(function () { edSay('Photo save nahi ho saki.', true); });
+    };
+    img.onerror = function () { edSay('Photo parhi nahi ja saki.', true); };
+    img.src = reader.result;
+  };
+  reader.onerror = function () { edSay('Photo parhi nahi ja saki.', true); };
+  reader.readAsDataURL(file);
+}
+
+(function init() {
+  if (!isConfigReady(FIREBASE_CONFIG) || typeof firebase === 'undefined') {
+    $('configWarn').style.display = 'block';
+    $('pinLoading').textContent = 'Firebase config abhi set nahi hui.';
+    $('uidBox').textContent = '— (config pending)';
+    return;
+  }
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.database();
+    firebase.auth().onAuthStateChanged(function (user) {
+      if (user) {
+        $('uidBox').textContent = user.uid;
+        loadPinHash();
+      } else {
+        firebase.auth().signInAnonymously().catch(function () {
+          $('uidBox').textContent = 'sign-in failed — internet check karein';
+          $('pinLoading').textContent = 'Sign-in nahi ho saka. Internet check karke page refresh karein.';
+        });
+      }
+    });
+  } catch (e) {
+    $('pinLoading').textContent = 'Firebase start nahi ho saka — config check karein.';
+  }
+
+  $('pinBtn').addEventListener('click', function () {
+    var pin = $('pinInput').value;
+    $('pinErr').textContent = '';
+    if (!pin) { $('pinErr').textContent = 'PIN likhein.'; return; }
+    if (sha256Hex(pin) === storedPinHash) { unlock(); }
+    else { $('pinErr').textContent = 'Ghalat PIN — dobara koshish karein.'; }
+  });
+  $('pinInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') { $('pinBtn').click(); } });
+
+  $('pinSetBtn').addEventListener('click', function () {
+    var p1 = $('pinNew').value, p2 = $('pinNew2').value;
+    $('pinSetupErr').textContent = '';
+    if (!p1 || p1.length < 4) { $('pinSetupErr').textContent = 'PIN kam az kam 4 number ka ho.'; return; }
+    if (p1 !== p2) { $('pinSetupErr').textContent = 'Dono PIN aik jaise nahi hain.'; return; }
+    var hash = sha256Hex(p1);
+    db.ref('config/doctorPinHash').set(hash)
+      .then(function () { storedPinHash = hash; unlock(); })
+      .catch(function () { $('pinSetupErr').textContent = 'PIN save nahi ho saka — rules publish hue hain ya nahi, check karein (SETUP-STEPS.md step 7).'; });
+  });
+
+  $('datePick').addEventListener('change', function () {
+    if (this.value) { attach(this.value); }
+  });
+
+  $('bookList').addEventListener('click', function (e) {
+    var btn = e.target && e.target.closest ? e.target.closest('button[data-act]') : null;
+    if (!btn || !currentDate) { return; }
+    db.ref('bookings/' + currentDate + '/' + btn.getAttribute('data-id'))
+      .update({ status: btn.getAttribute('data-act') });
+  });
+
+  /* --------------------- Website Edit handlers --------------------- */
+  $('edNoticeSave').addEventListener('click', function () {
+    db.ref('clinicInfo/notice').set($('edNotice').value.trim())
+      .then(function () { edSay('Notice save ho gaya — website pe nazar aayega.'); })
+      .catch(function () { edSay('Notice save nahi ho saka.', true); });
+  });
+
+  $('edNoticeRemove').addEventListener('click', function () {
+    db.ref('clinicInfo/notice').set('')
+      .then(function () { $('edNotice').value = ''; edSay('Notice hata diya gaya.'); })
+      .catch(function () { edSay('Notice nahi hat saka.', true); });
+  });
+
+  $('edTimingsSave').addEventListener('click', function () {
+    var o = $('edOpen').value, c = $('edClose').value;
+    if (!o || !c) { edSay('Khulne aur band hone — dono waqt likhein.', true); return; }
+    if (c <= o) { edSay('Band hone ka waqt khulne ke waqt ke baad hona chahiye.', true); return; }
+    db.ref('clinicInfo').update({
+      openTime: o,
+      closeTime: c,
+      closedDay: Number($('edClosedDay').value)
+    })
+      .then(function () { edSay('Timings save ho gaye — website aur appointment slots update ho jayenge.'); })
+      .catch(function () { edSay('Timings save nahi ho sake.', true); });
+  });
+
+  $('edTreatAdd').addEventListener('click', function () {
+    var en = $('edTreatEn').value.trim();
+    var ur = $('edTreatUr').value.trim();
+    if (!en) { edSay('Treatment ka English name likhein.', true); return; }
+    var list = clinicInfoState ? clinicInfoState.treatments.slice() : [];
+    list.push({ en: en, ur: ur });
+    db.ref('clinicInfo/treatments').set(list)
+      .then(function () {
+        $('edTreatEn').value = '';
+        $('edTreatUr').value = '';
+        edSay('Treatment shamil ho gaya — website pe nazar aayega.');
+      })
+      .catch(function () { edSay('Treatment save nahi ho saka.', true); });
+  });
+
+  $('edTreatList').addEventListener('click', function (e) {
+    var btn = e.target && e.target.closest ? e.target.closest('button[data-tdel]') : null;
+    if (!btn || !clinicInfoState) { return; }
+    var list = clinicInfoState.treatments.slice();
+    list.splice(Number(btn.getAttribute('data-tdel')), 1);
+    db.ref('clinicInfo/treatments').set(list)
+      .then(function () { edSay('Treatment delete ho gaya.'); })
+      .catch(function () { edSay('Treatment delete nahi ho saka.', true); });
+  });
+
+  $('edGallery').addEventListener('click', function (e) {
+    var btn = e.target && e.target.closest ? e.target.closest('button[data-gdel]') : null;
+    if (!btn || !clinicInfoState) { return; }
+    var gallery = clinicInfoState.gallery.slice();
+    gallery.splice(Number(btn.getAttribute('data-gdel')), 1);
+    db.ref('clinicInfo/gallery').set(gallery)
+      .then(function () { edSay('Photo delete ho gayi.'); })
+      .catch(function () { edSay('Photo delete nahi ho saki.', true); });
+  });
+
+  $('edPhotoFile').addEventListener('change', function () {
+    var file = this.files && this.files[0];
+    this.value = '';
+    if (!file) { return; }
+    var count = clinicInfoState ? clinicInfoState.gallery.length : 0;
+    if (!canAddPhoto(count)) {
+      edSay('Gallery full (6 photos) — pehle koi photo delete karein.', true);
+      return;
+    }
+    edSay('Photo tayyar ho rahi hai…');
+    addPhotoFile(file);
+  });
+})();
+</script>
+
+</body>
+</html>

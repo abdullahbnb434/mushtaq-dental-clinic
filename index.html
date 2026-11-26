@@ -42,7 +42,21 @@
   .err { color: #b02a2a; font-size: 14px; margin-top: 10px; min-height: 18px; font-weight: 600; }
   .note { font-size: 13px; color: #5a7680; margin-top: 10px; text-align: center; }
   footer { text-align: center; color: #7b97a0; font-size: 13px; padding: 22px 10px 8px; }
+  .submit:disabled { opacity: .6; }
+  .success { text-align: center; padding: 8px 0 4px; }
+  .success .ticket { font-size: 52px; }
+  .success .token { font-size: 36px; font-weight: 800; color: #065a60; margin: 4px 0; }
+  .success .when { font-size: 16px; color: #23424c; font-weight: 600; }
+  .success .who { font-size: 14px; color: #5a7680; margin-top: 2px; }
+  .success .wabtn { display: block; margin-top: 14px; background: #25d366; color: #07332f; text-decoration: none; font-weight: 800; font-size: 16px; padding: 14px; border-radius: 999px; }
+  .success .again { margin-top: 12px; background: none; border: none; color: #0b7285; font-weight: 700; font-size: 14px; cursor: pointer; text-decoration: underline; }
+  .notice-banner { background: #ffdf6b; color: #4a3500; text-align: center; font-weight: 700; font-size: 15px; padding: 11px 16px; box-shadow: 0 2px 6px rgba(0,0,0,.12); }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .gallery img { width: 100%; height: 130px; object-fit: cover; border-radius: 10px; display: block; }
 </style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 </head>
 <body>
 
@@ -50,6 +64,8 @@
   <div class="brand">🦷 MUSHTAQ DENTAL CLINIC<small>Umar Abad · District Mardan</small></div>
   <a class="callbtn" href="tel:+923450556651">📞 Call Now</a>
 </div>
+
+<div class="notice-banner" id="noticeBanner" style="display:none;">📢 <span id="noticeText"></span></div>
 
 <div class="wrap">
 
@@ -66,7 +82,7 @@
 
   <div class="card">
     <h2>Our Services — ہماری سہولتیں</h2>
-    <div class="services">
+    <div class="services" id="servicesGrid">
       <div class="svc"><div class="ic">🦷</div><div class="en">Filling</div><div class="ur">دانتوں کی فلنگ</div></div>
       <div class="svc"><div class="ic">👑</div><div class="en">Crown</div><div class="ur">کراؤن</div></div>
       <div class="svc"><div class="ic">🔩</div><div class="en">Fixed Teeth</div><div class="ur">دانت فکس کرنا</div></div>
@@ -82,8 +98,8 @@
     <h2>Timings &amp; Address — اوقات اور پتہ</h2>
     <div class="info">
       <div>
-        <div class="row"><span class="lbl">Monday – Saturday:</span> 8:00 AM – 2:00 PM <span class="open">(Open)</span></div>
-        <div class="row"><span class="lbl">Sunday:</span> <span class="closed">Closed</span></div>
+        <div class="row"><span class="lbl"><span id="openDaysLbl">Monday – Saturday</span>:</span> <span id="openRange">8:00 AM – 2:00 PM</span> <span class="open">(Open)</span></div>
+        <div class="row"><span class="lbl"><span id="closedDayLbl">Sunday</span>:</span> <span class="closed">Closed</span></div>
         <div class="row"><span class="lbl">WhatsApp:</span> 0345-0556651</div>
       </div>
       <div>
@@ -93,6 +109,11 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <div class="card" id="galleryCard" style="display:none;">
+    <h2>Clinic Gallery — کلینک کی تصاویر</h2>
+    <div class="gallery" id="galleryGrid"></div>
   </div>
 
   <div class="card" id="book">
@@ -138,7 +159,16 @@
       <button class="submit" type="submit">💬 Book on WhatsApp</button>
       <div class="err" id="formErr"></div>
       <p class="note">Button dabane se WhatsApp khul jayega — wahan <b>Send</b> dabadein. Appointment ki tasdeeq clinic ki taraf se WhatsApp par hi kar di jayegi.</p>
-    </form>
+        </form>
+    <div class="success" id="successPanel" style="display:none;">
+      <div class="ticket">🎟️</div>
+      <div class="token" id="spToken">Token No. 1</div>
+      <div class="when" id="spWhen"></div>
+      <div class="who" id="spName"></div>
+      <p class="note">Aap ki booking darj ho gayi hai aur ye token number doctor ko bhi nazar aa jayega. Ab neeche wala button dabakar booking WhatsApp pe bhi bhej dein, taake clinic ko foran pata chal jaye.</p>
+      <a class="wabtn" id="spWaBtn" href="#">💬 WhatsApp pe bhejein</a>
+      <button class="again" id="spAgain" type="button">Ek aur booking karein</button>
+    </div>
   </div>
 
   <footer>© 2026 Mushtaq Dental Clinic · Umar Abad Budh Seari, District Mardan · WhatsApp 0345-0556651</footer>
@@ -146,49 +176,414 @@
 </div>
 
 <script>
-(function () {
-  var CLINIC_WA = '923450556651';
-  var dateEl = document.getElementById('pdate');
-  var today = new Date();
-  function iso(d) {
-    var m = String(d.getMonth() + 1).padStart(2, '0');
-    var day = String(d.getDate()).padStart(2, '0');
-    return d.getFullYear() + '-' + m + '-' + day;
+/* =====================================================================
+   Mushtaq Dental Clinic — patient page v2 (automatic token numbers)
+   Booking flow:
+     1. Patient fills the form (same validation as v1, Sunday blocked).
+     2. If Firebase is configured and reachable, the booking is saved to
+        Dr Mushtaq's OWN Firebase project and the patient gets the next
+        token number for the chosen date (Token No. 1, 2, 3, ...).
+     3. A success panel shows the token + a WhatsApp button so the
+        patient can also send the booking (with token) to the clinic.
+     4. If Firebase is not set up yet or anything fails, the page falls
+        back to the exact v1 behaviour: open WhatsApp with the message.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   SETUP: replace with Dr Mushtaq's Firebase project config
+   (Firebase console -> Project settings -> "Your apps" -> Web app.)
+   Until this is replaced with the real config, the page simply works
+   like v1 (WhatsApp only, no token numbers).
+   --------------------------------------------------------------------- */
+var FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAvPC7Km8YlTEd9X-cT20X1TbJaEo15Vhk",
+  authDomain: "mushtaq-dental-clinic.firebaseapp.com",
+  databaseURL: "https://mushtaq-dental-clinic-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "mushtaq-dental-clinic",
+  storageBucket: "mushtaq-dental-clinic.firebasestorage.app",
+  messagingSenderId: "706325827944",
+  appId: "1:706325827944:web:2fc2c6a49b92ca85b846dd"
+};
+
+/* === PURE LOGIC START === */
+var CLINIC_WA = '923450556651';
+var DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function isoDate(d) {
+  var m = String(d.getMonth() + 1).padStart(2, '0');
+  var day = String(d.getDate()).padStart(2, '0');
+  return d.getFullYear() + '-' + m + '-' + day;
+}
+
+/* The counter + bookings for a day live under the appointment date
+   itself, in the date input's own format: YYYY-MM-DD. */
+function counterKeyForDate(dateVal) {
+  return dateVal;
+}
+
+function dayNameFor(dateVal) {
+  var picked = new Date(dateVal + 'T00:00:00');
+  return DAY_NAMES[picked.getDay()];
+}
+
+/* Same checks as v1, in the same order. Returns '' when valid,
+   otherwise the error message to show the patient. The weekly closed
+   day comes from clinicInfo (default Sunday); with the default the
+   closed-day message reads: "Sunday ko clinic band hota hai — koi
+   aur din select karein." */
+function validateBooking(f, closedDay) {
+  var cd = (typeof closedDay === 'number' && closedDay >= 0 && closedDay <= 6) ? closedDay : 0;
+  if (!f.name) return 'Please write the patient name.';
+  var digits = String(f.mobile || '').replace(/[^0-9]/g, '');
+  if (digits.length < 10 || digits.length > 13) return 'Please write a correct mobile number.';
+  if (!f.dateVal) return 'Please select a date.';
+  if (isClosedDay(f.dateVal, cd)) return DAY_NAMES[cd] + ' ko clinic band hota hai — koi aur din select karein.';
+  if (!f.time) return 'Please select a time.';
+  if (!f.treat) return 'Please select a treatment.';
+  return '';
+}
+
+/* Transaction helper: current counter value -> next token number.
+   A missing counter (null) means no booking yet, so token 1. */
+function nextToken(current) {
+  return (current == null ? 0 : current) + 1;
+}
+
+/* WhatsApp message lines. token = the patient's token number,
+   or null when no token was issued (v1 fallback — no token line). */
+function buildBookingLines(b, token) {
+  var lines = ['Assalam o Alaikum, Mushtaq Dental Clinic me appointment chahiye.'];
+  if (token != null) lines.push('Token No: ' + token);
+  lines.push('Naam: ' + b.name);
+  lines.push('Mobile: ' + b.mobile);
+  lines.push('Date: ' + b.dateVal + ' (' + dayNameFor(b.dateVal) + ')');
+  lines.push('Time: ' + b.time);
+  lines.push('Treatment: ' + b.treat);
+  if (b.note) lines.push('Note: ' + b.note);
+  return lines;
+}
+
+function buildWaUrl(lines) {
+  return 'https://wa.me/' + CLINIC_WA + '?text=' + encodeURIComponent(lines.join('\n'));
+}
+
+/* Doctor list ordering: lowest token first. Bookings without a
+   token (should not happen) go last. */
+function sortBookingsByToken(list) {
+  return list.slice().sort(function (a, b) {
+    var ta = (a && a.token != null) ? a.token : 999999;
+    var tb = (b && b.token != null) ? b.token : 999999;
+    return ta - tb;
+  });
+}
+
+/* Firebase counts as "set up" only when the placeholder config has
+   been replaced with a real one. */
+function isConfigReady(cfg) {
+  return !!(cfg && cfg.apiKey && String(cfg.apiKey).indexOf('PLACEHOLDER') === -1);
+}
+
+/* Escape doctor-typed text (treatments etc.) before it goes into
+   the page HTML. */
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/* ---------------------------------------------------------------------
+   Clinic content the doctor can edit himself from doctor.html
+   (stored in Firebase at clinicInfo). These defaults are exactly
+   what the site ships with today; when a clinicInfo node exists,
+   its values are merged over these defaults.
+   --------------------------------------------------------------------- */
+var SERVICE_ICONS = ['🦷', '👑', '🔩', '😁', '🧩', '💎', '✨', '🩺'];
+var DEFAULT_CLINIC_INFO = {
+  notice: '',
+  openTime: '08:00',
+  closeTime: '14:00',
+  closedDay: 0,
+  treatments: [
+    { en: 'Filling', ur: 'دانتوں کی فلنگ' },
+    { en: 'Crown', ur: 'کراؤن' },
+    { en: 'Fixed Teeth', ur: 'دانت فکس کرنا' },
+    { en: 'Complete Denture', ur: 'مکمل دانت' },
+    { en: 'Partial Denture', ur: 'پارشیل دانت' },
+    { en: 'Zirconium Teeth', ur: 'زرکونیم دانت' },
+    { en: '3D Teeth', ur: '3D دانت' },
+    { en: 'Checkup & Advice', ur: 'معائنہ اور مشورہ' }
+  ],
+  gallery: []
+};
+
+function cloneTreatments(list) {
+  return list.map(function (t) {
+    return { en: String((t && t.en) || ''), ur: String((t && t.ur) || '') };
+  });
+}
+
+/* Firebase sometimes hands arrays back as objects with numeric keys;
+   normalise both shapes to a real array (or null when unusable). */
+function toArray(v) {
+  if (!v) return null;
+  if (Object.prototype.toString.call(v) === '[object Array]') return v;
+  if (typeof v === 'object') {
+    var keys = Object.keys(v);
+    var sequential = keys.length > 0 && keys.every(function (k) {
+      var n = Number(k);
+      return String(n) === k && n >= 0 && n < keys.length;
+    });
+    if (sequential) {
+      return keys.sort(function (a, b) { return Number(a) - Number(b); })
+        .map(function (k) { return v[k]; });
+    }
   }
-  dateEl.min = iso(today);
+  return null;
+}
 
-  document.getElementById('apptForm').addEventListener('submit', function (e) {
-    e.preventDefault();
-    var err = document.getElementById('formErr');
+/* Merge whatever is stored in Firebase over the built-in defaults,
+   field by field, so a partial or malformed clinicInfo can never
+   break the page. Always returns fresh objects/arrays. */
+function mergeClinicInfo(raw) {
+  var out = {
+    notice: DEFAULT_CLINIC_INFO.notice,
+    openTime: DEFAULT_CLINIC_INFO.openTime,
+    closeTime: DEFAULT_CLINIC_INFO.closeTime,
+    closedDay: DEFAULT_CLINIC_INFO.closedDay,
+    treatments: cloneTreatments(DEFAULT_CLINIC_INFO.treatments),
+    gallery: []
+  };
+  if (!raw || typeof raw !== 'object') return out;
+  if (typeof raw.notice === 'string') out.notice = raw.notice;
+  if (typeof raw.openTime === 'string' && /^\d{2}:\d{2}$/.test(raw.openTime)) out.openTime = raw.openTime;
+  if (typeof raw.closeTime === 'string' && /^\d{2}:\d{2}$/.test(raw.closeTime)) out.closeTime = raw.closeTime;
+  if (typeof raw.closedDay === 'number' && raw.closedDay >= 0 && raw.closedDay <= 6) out.closedDay = raw.closedDay;
+  var tr = toArray(raw.treatments);
+  if (tr && tr.length) out.treatments = cloneTreatments(tr);
+  var gal = toArray(raw.gallery);
+  if (gal) out.gallery = gal.filter(function (g) { return typeof g === 'string'; });
+  return out;
+}
+
+/* "08:00" -> "8:00 AM", "13:30" -> "1:30 PM", "00:00" -> "12:00 AM" */
+function formatTime12h(hhmm) {
+  var parts = String(hhmm || '').split(':');
+  var h = parseInt(parts[0], 10);
+  var m = parseInt(parts[1], 10);
+  if (isNaN(h) || isNaN(m)) return String(hhmm || '');
+  var suffix = h >= 12 ? 'PM' : 'AM';
+  var h12 = h % 12;
+  if (h12 === 0) h12 = 12;
+  return h12 + ':' + String(m).padStart(2, '0') + ' ' + suffix;
+}
+
+/* Appointment slots every 30 minutes from openTime up to (not
+   including) closeTime — the last slot is 30 minutes before closing,
+   exactly like the v1 hard-coded list (8:00 AM … 1:30 PM). */
+function generateTimeSlots(openTime, closeTime) {
+  function toMin(t) {
+    var p = String(t || '').split(':');
+    return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
+  }
+  function toHHMM(mins) {
+    return String(Math.floor(mins / 60)).padStart(2, '0') + ':' + String(mins % 60).padStart(2, '0');
+  }
+  var start = toMin(openTime), end = toMin(closeTime), out = [];
+  if (isNaN(start) || isNaN(end) || end <= start) return out;
+  for (var t = start; t < end; t += 30) out.push(formatTime12h(toHHMM(t)));
+  return out;
+}
+
+/* Is the given appointment date (YYYY-MM-DD) the weekly closed day? */
+function isClosedDay(dateVal, closedDay) {
+  var cd = (typeof closedDay === 'number' && closedDay >= 0 && closedDay <= 6) ? closedDay : 0;
+  return new Date(dateVal + 'T00:00:00').getDay() === cd;
+}
+
+/* "Monday – Saturday" style label for the six open days: the run of
+   days starting the day after the closed day. */
+function openDaysLabel(closedDay) {
+  var cd = (typeof closedDay === 'number' && closedDay >= 0 && closedDay <= 6) ? closedDay : 0;
+  return DAY_NAMES[(cd + 1) % 7] + ' – ' + DAY_NAMES[(cd + 6) % 7];
+}
+/* === PURE LOGIC END === */
+
+/* ------------------------- Firebase wiring ------------------------- */
+var fbDb = null;
+var fbReadyPromise = null;
+
+function initFirebase() {
+  fbReadyPromise = new Promise(function (resolve) {
+    if (!isConfigReady(FIREBASE_CONFIG) || typeof firebase === 'undefined') { resolve(false); return; }
+    try {
+      firebase.initializeApp(FIREBASE_CONFIG);
+      fbDb = firebase.database();
+      firebase.auth().signInAnonymously()
+        .then(function () { resolve(true); })
+        .catch(function () { resolve(false); }); /* stay quiet — v1 fallback still works */
+    } catch (e) {
+      resolve(false);
+    }
+  });
+}
+
+/* Wait for Firebase, but never block a booking for more than 6 seconds. */
+function whenFirebaseReady() {
+  return Promise.race([
+    fbReadyPromise,
+    new Promise(function (resolve) { setTimeout(function () { resolve(false); }, 6000); })
+  ]);
+}
+
+/* ------------------------------ The form ------------------------------ */
+(function () {
+  var form = document.getElementById('apptForm');
+  var err = document.getElementById('formErr');
+  var btn = form.querySelector('.submit');
+  var dateEl = document.getElementById('pdate');
+  var panel = document.getElementById('successPanel');
+  var busy = false;
+  var clinicInfo = mergeClinicInfo(null); /* defaults until Firebase answers */
+
+  dateEl.min = isoDate(new Date());
+  initFirebase();
+  applyClinicInfo(clinicInfo);
+  whenFirebaseReady().then(function (ready) {
+    if (!ready || !fbDb) return;
+    fbDb.ref('clinicInfo').on('value', function (snap) {
+      applyClinicInfo(mergeClinicInfo(snap.val()));
+    }, function () { /* clinicInfo read failed — the defaults stay on screen */ });
+  });
+
+  /* Re-render every doctor-editable part of the page from clinicInfo:
+     notice banner, timings card, services grid, gallery, time slots. */
+  function applyClinicInfo(info) {
+    clinicInfo = info;
+
+    var banner = document.getElementById('noticeBanner');
+    if (info.notice) {
+      document.getElementById('noticeText').textContent = info.notice;
+      banner.style.display = 'block';
+    } else {
+      banner.style.display = 'none';
+    }
+
+    document.getElementById('openDaysLbl').textContent = openDaysLabel(info.closedDay);
+    document.getElementById('openRange').textContent =
+      formatTime12h(info.openTime) + ' – ' + formatTime12h(info.closeTime);
+    document.getElementById('closedDayLbl').textContent = DAY_NAMES[info.closedDay];
+
+    document.getElementById('servicesGrid').innerHTML = info.treatments.map(function (t, i) {
+      var icon = SERVICE_ICONS[i] || '🦷';
+      return '<div class="svc"><div class="ic">' + icon + '</div>'
+        + '<div class="en">' + escapeHtml(t.en) + '</div>'
+        + '<div class="ur">' + escapeHtml(t.ur) + '</div></div>';
+    }).join('');
+
+    var gCard = document.getElementById('galleryCard');
+    if (info.gallery && info.gallery.length) {
+      document.getElementById('galleryGrid').innerHTML = info.gallery.map(function (src) {
+        return '<img src="' + escapeHtml(src) + '" alt="Clinic photo">';
+      }).join('');
+      gCard.style.display = 'block';
+    } else {
+      gCard.style.display = 'none';
+    }
+
+    renderTimeSlots(info);
+  }
+
+  function renderTimeSlots(info) {
+    var sel = document.getElementById('ptime');
+    var prev = sel.value;
+    var slots = generateTimeSlots(info.openTime, info.closeTime);
+    var html = '<option value="">Select time…</option>';
+    slots.forEach(function (s) { html += '<option>' + escapeHtml(s) + '</option>'; });
+    sel.innerHTML = html;
+    if (prev && slots.indexOf(prev) !== -1) sel.value = prev;
+  }
+
+  function readFields() {
+    return {
+      name: document.getElementById('pname').value.trim(),
+      mobile: document.getElementById('pmobile').value.trim(),
+      dateVal: dateEl.value,
+      time: document.getElementById('ptime').value,
+      treat: document.getElementById('ptreat').value,
+      note: document.getElementById('pnote').value.trim()
+    };
+  }
+
+  function setBusy(on) {
+    busy = on;
+    btn.disabled = on;
+    btn.textContent = on ? '⏳ Token mil raha hai…' : '💬 Book on WhatsApp';
+  }
+
+  /* v1 behaviour: straight to WhatsApp, no token. */
+  function fallbackToWhatsApp(f) {
+    window.location.href = buildWaUrl(buildBookingLines(f, null));
+  }
+
+  function showSuccess(f, token) {
+    document.getElementById('spToken').textContent = 'Token No. ' + token;
+    document.getElementById('spWhen').textContent =
+      '📅 ' + f.dateVal + ' (' + dayNameFor(f.dateVal) + ') · 🕗 ' + f.time + ' · ' + f.treat;
+    document.getElementById('spName').textContent = f.name + ' — ' + f.mobile;
+    document.getElementById('spWaBtn').href = buildWaUrl(buildBookingLines(f, token));
+    form.style.display = 'none';
+    panel.style.display = 'block';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  document.getElementById('spAgain').addEventListener('click', function () {
+    form.reset();
+    dateEl.min = isoDate(new Date());
     err.textContent = '';
-    var name = document.getElementById('pname').value.trim();
-    var mobile = document.getElementById('pmobile').value.trim();
-    var dateVal = dateEl.value;
-    var time = document.getElementById('ptime').value;
-    var treat = document.getElementById('ptreat').value;
-    var note = document.getElementById('pnote').value.trim();
+    setBusy(false);
+    panel.style.display = 'none';
+    form.style.display = 'block';
+  });
 
-    if (!name) { err.textContent = 'Please write the patient name.'; return; }
-    var digits = mobile.replace(/[^0-9]/g, '');
-    if (digits.length < 10 || digits.length > 13) { err.textContent = 'Please write a correct mobile number.'; return; }
-    if (!dateVal) { err.textContent = 'Please select a date.'; return; }
-    var picked = new Date(dateVal + 'T00:00:00');
-    if (picked.getDay() === 0) { err.textContent = 'Sunday ko clinic band hota hai — koi aur din select karein.'; return; }
-    if (!time) { err.textContent = 'Please select a time.'; return; }
-    if (!treat) { err.textContent = 'Please select a treatment.'; return; }
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (busy) return;
+    err.textContent = '';
+    var f = readFields();
 
-    var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    var lines = [
-      'Assalam o Alaikum, Mushtaq Dental Clinic me appointment chahiye.',
-      'Naam: ' + name,
-      'Mobile: ' + mobile,
-      'Date: ' + dateVal + ' (' + days[picked.getDay()] + ')',
-      'Time: ' + time,
-      'Treatment: ' + treat
-    ];
-    if (note) lines.push('Note: ' + note);
-    var url = 'https://wa.me/' + CLINIC_WA + '?text=' + encodeURIComponent(lines.join('\n'));
-    window.location.href = url;
+    var problem = validateBooking(f, clinicInfo.closedDay);
+    if (problem) { err.textContent = problem; return; }
+
+    setBusy(true);
+    whenFirebaseReady().then(function (ready) {
+      if (!ready || !fbDb) { fallbackToWhatsApp(f); return; }
+
+      var dateKey = counterKeyForDate(f.dateVal);
+      fbDb.ref('counters/' + dateKey)
+        .transaction(function (current) { return nextToken(current); })
+        .then(function (res) {
+          if (!res || !res.committed) throw new Error('token not committed');
+          var token = res.snapshot.val();
+          var booking = {
+            token: token,
+            name: f.name,
+            mobile: f.mobile,
+            date: f.dateVal,
+            time: f.time,
+            treatment: f.treat,
+            note: f.note,
+            status: 'booked',
+            createdAt: firebase.database.ServerValue.TIMESTAMP
+          };
+          return fbDb.ref('bookings/' + dateKey).push(booking)
+            .then(function () { return token; });
+        })
+        .then(function (token) { showSuccess(f, token); })
+        .catch(function () { fallbackToWhatsApp(f); });
+    });
   });
 })();
 </script>
