@@ -75,6 +75,7 @@
   <div class="card" id="pinGate">
     <h2>🔒 Doctor Login — ڈاکٹر لاگ ان</h2>
     <div id="pinLoading" class="note">Loading…</div>
+    <button id="pinRetry" type="button" style="display:none; margin-top:10px; padding:10px 18px; border:none; border-radius:10px; background:#0f766e; color:#fff; font-size:15px;">🔄 Dobara koshish karein</button>
 
     <div id="pinUnlock" style="display:none;">
       <label for="pinInput">PIN — پن کوڈ</label>
@@ -378,18 +379,38 @@ var $ = function (id) { return document.getElementById(id); };
 
 function showPinMode() {
   $('pinLoading').style.display = 'none';
+  $('pinRetry').style.display = 'none';
   $('pinUnlock').style.display = storedPinHash ? 'block' : 'none';
   $('pinSetup').style.display = storedPinHash ? 'none' : 'block';
 }
 
+/* One PIN-hash read with a 12s timeout — on a slow/flaky connection a bare
+   .once() can hang forever; the timeout turns a hang into a retry. */
+function readPinHashOnce() {
+  return Promise.race([
+    db.ref('config/doctorPinHash').once('value'),
+    new Promise(function (resolve, reject) { setTimeout(function () { reject(new Error('timeout')); }, 12000); })
+  ]);
+}
+
+var pinTries = 0;
 function loadPinHash() {
-  db.ref('config/doctorPinHash').once('value')
+  pinTries++;
+  $('pinRetry').style.display = 'none';
+  $('pinLoading').style.display = 'block';
+  $('pinLoading').textContent = pinTries > 1 ? ('Rabta ho raha hai… dobara koshish (' + pinTries + '/5)') : 'Loading…';
+  readPinHashOnce()
     .then(function (snap) {
       storedPinHash = snap.val();
       showPinMode();
     })
     .catch(function () {
-      $('pinLoading').textContent = 'Database se rabta nahi ho saka. Agar setup abhi chal raha hai to pehle rules publish karein (SETUP-STEPS.md step 7), phir page refresh karein.';
+      if (pinTries < 5) {
+        setTimeout(loadPinHash, 3000);
+      } else {
+        $('pinLoading').textContent = 'Database se rabta nahi ho saka. Internet slow ho to thora ruk kar dobara koshish karein.';
+        $('pinRetry').style.display = 'block';
+      }
     });
 }
 
@@ -575,6 +596,7 @@ function addPhotoFile(file) {
     $('pinLoading').textContent = 'Firebase start nahi ho saka — config check karein.';
   }
 
+  $('pinRetry').addEventListener('click', function () { pinTries = 0; loadPinHash(); });
   $('pinBtn').addEventListener('click', function () {
     var pin = $('pinInput').value;
     $('pinErr').textContent = '';
