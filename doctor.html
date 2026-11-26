@@ -384,12 +384,12 @@ function showPinMode() {
   $('pinSetup').style.display = storedPinHash ? 'none' : 'block';
 }
 
-/* One PIN-hash read with a 12s timeout — on a slow/flaky connection a bare
+/* One PIN-hash read with a 30s timeout — on a slow/flaky connection a bare
    .once() can hang forever; the timeout turns a hang into a retry. */
 function readPinHashOnce() {
   return Promise.race([
     db.ref('config/doctorPinHash').once('value'),
-    new Promise(function (resolve, reject) { setTimeout(function () { reject(new Error('timeout')); }, 12000); })
+    new Promise(function (resolve, reject) { setTimeout(function () { reject(new Error('timeout')); }, 30000); })
   ]);
 }
 
@@ -398,15 +398,15 @@ function loadPinHash() {
   pinTries++;
   $('pinRetry').style.display = 'none';
   $('pinLoading').style.display = 'block';
-  $('pinLoading').textContent = pinTries > 1 ? ('Rabta ho raha hai… dobara koshish (' + pinTries + '/5)') : 'Loading…';
+  $('pinLoading').textContent = pinTries > 1 ? ('Rabta ho raha hai… dobara koshish (' + pinTries + '/8)') : 'Loading…';
   readPinHashOnce()
     .then(function (snap) {
       storedPinHash = snap.val();
       showPinMode();
     })
     .catch(function () {
-      if (pinTries < 5) {
-        setTimeout(loadPinHash, 3000);
+      if (pinTries < 8) {
+        setTimeout(loadPinHash, 4000);
       } else {
         $('pinLoading').textContent = 'Database se rabta nahi ho saka. Internet slow ho to thora ruk kar dobara koshish karein.';
         $('pinRetry').style.display = 'block';
