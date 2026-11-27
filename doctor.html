@@ -77,6 +77,17 @@
     <div id="pinLoading" class="note">Loading…</div>
     <button id="pinRetry" type="button" style="display:none; margin-top:10px; padding:10px 18px; border:none; border-radius:10px; background:#0f766e; color:#fff; font-size:15px;">🔄 Dobara koshish karein</button>
 
+    <div id="loginBox" style="display:none;">
+      <p class="note">Apne clinic account se login karein. <b>Pehli dafa</b> hai to apna Gmail likh kar <b>"Account banayein"</b> dabayein — password Gmail wala <b>NAHI</b>, ek naya asan password rakhein jo aap ko hamesha yaad rahe. Ye account hi aap ki asal pehchan hai: browser ka data clear bhi ho jaye to isi email + password se dobara login ho jayega.</p>
+      <label for="loginEmail">Email — ای میل</label>
+      <input id="loginEmail" type="email" autocomplete="username" placeholder="aapka@gmail.com">
+      <label for="loginPass">Password — پاس ورڈ (kam az kam 6)</label>
+      <input id="loginPass" type="password" autocomplete="current-password" placeholder="••••••">
+      <button class="submit" id="loginBtn" type="button">Login — لاگ ان</button>
+      <button class="submit" id="signupBtn" type="button" style="background:#fff; color:#0f766e; border:2px solid #0f766e; margin-top:8px;">Pehli dafa — Account banayein</button>
+      <div class="err" id="loginErr"></div>
+    </div>
+
     <div id="pinUnlock" style="display:none;">
       <label for="pinInput">PIN — پن کوڈ</label>
       <input id="pinInput" type="password" inputmode="numeric" autocomplete="off" placeholder="••••">
@@ -167,7 +178,7 @@
     <h2 style="font-size:16px;">Setup info</h2>
     <div><span class="lbl">Doctor UID:</span> <code id="uidBox">signing in…</code></div>
     <div id="diagBox" class="note" style="margin-top:8px;">Check: …</div>
-    <p class="note">Ye UID Firebase rules me <b>__DOCTOR_UID__</b> ki jagah lagti hai (SETUP-STEPS.md, step 7). Doctor page hamesha <b>isi phone aur isi browser</b> se kholein — browser ka data clear karne ya dusra browser istemal karne se nayi UID ban jayegi; aisa ho to nayi UID dobara rules me dalni hogi.</p>
+    <p class="note">Ye aap ke <b>login account</b> ki UID hai — yehi UID Firebase rules me lagi hai. Browser ka data clear bhi ho jaye to koi baat nahi: bas isi email + password se dobara login kar lein, UID hamesha wahi rahegi.</p>
   </div>
 
   <footer>© 2026 Mushtaq Dental Clinic · Doctor page — private</footer>
@@ -621,15 +632,24 @@ function addPhotoFile(file) {
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.database();
     firebase.auth().onAuthStateChanged(function (user) {
+      if (user && user.isAnonymous) {
+        /* The old anonymous identity is retired — its token kept going
+           stale and the database denied it. Sign it out so the email
+           login form shows; the email account's UID never changes. */
+        firebase.auth().signOut();
+        return;
+      }
       if (user) {
+        $('loginBox').style.display = 'none';
         $('uidBox').textContent = user.uid;
         loadPinHash();
         selfTest();
       } else {
-        firebase.auth().signInAnonymously().catch(function () {
-          $('uidBox').textContent = 'sign-in failed — internet check karein';
-          $('pinLoading').textContent = 'Sign-in nahi ho saka. Internet check karke page refresh karein.';
-        });
+        $('uidBox').textContent = '— login karein';
+        $('pinLoading').style.display = 'none';
+        $('pinUnlock').style.display = 'none';
+        $('pinSetup').style.display = 'none';
+        $('loginBox').style.display = 'block';
       }
     });
   } catch (e) {
@@ -637,6 +657,36 @@ function addPhotoFile(file) {
   }
 
   $('pinRetry').addEventListener('click', function () { pinTries = 0; loadPinHash(); });
+
+  function authErrorText(e) {
+    var c = e && e.code ? e.code : '';
+    if (c === 'auth/invalid-email') return 'Email sahi nahi likha.';
+    if (c === 'auth/user-not-found' || c === 'auth/invalid-credential' || c === 'auth/wrong-password') return 'Email ya password ghalat hai. Pehli dafa hai to "Account banayein" dabayein.';
+    if (c === 'auth/email-already-in-use') return 'Ye account pehle se bana hua hai — Login karein.';
+    if (c === 'auth/weak-password') return 'Password kam az kam 6 characters ka rakhein.';
+    if (c === 'auth/operation-not-allowed') return 'Email login abhi on nahi hua — developer ko batayein.';
+    if (c === 'auth/network-request-failed') return 'Internet ka masla — connection check karke dobara koshish karein.';
+    return 'Nahi ho saka (' + (c || 'error') + ') — dobara koshish karein.';
+  }
+  $('loginBtn').addEventListener('click', function () {
+    var em = $('loginEmail').value.trim(), pw = $('loginPass').value;
+    $('loginErr').textContent = '';
+    if (!em || !pw) { $('loginErr').textContent = 'Email aur password — dono likhein.'; return; }
+    $('loginBtn').textContent = 'Login ho raha hai…';
+    firebase.auth().signInWithEmailAndPassword(em, pw)
+      .catch(function (e) { $('loginErr').textContent = authErrorText(e); })
+      .then(function () { $('loginBtn').textContent = 'Login — لاگ ان'; });
+  });
+  $('signupBtn').addEventListener('click', function () {
+    var em = $('loginEmail').value.trim(), pw = $('loginPass').value;
+    $('loginErr').textContent = '';
+    if (!em || !pw) { $('loginErr').textContent = 'Email aur password — dono likhein.'; return; }
+    if (pw.length < 6) { $('loginErr').textContent = 'Password kam az kam 6 characters ka rakhein.'; return; }
+    $('signupBtn').textContent = 'Account ban raha hai…';
+    firebase.auth().createUserWithEmailAndPassword(em, pw)
+      .catch(function (e) { $('loginErr').textContent = authErrorText(e); })
+      .then(function () { $('signupBtn').textContent = 'Pehli dafa — Account banayein'; });
+  });
   $('pinBtn').addEventListener('click', function () {
     var pin = $('pinInput').value;
     $('pinErr').textContent = '';
