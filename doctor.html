@@ -166,6 +166,7 @@
   <div class="card setupinfo">
     <h2 style="font-size:16px;">Setup info</h2>
     <div><span class="lbl">Doctor UID:</span> <code id="uidBox">signing in…</code></div>
+    <div id="diagBox" class="note" style="margin-top:8px;">Check: …</div>
     <p class="note">Ye UID Firebase rules me <b>__DOCTOR_UID__</b> ki jagah lagti hai (SETUP-STEPS.md, step 7). Doctor page hamesha <b>isi phone aur isi browser</b> se kholein — browser ka data clear karne ya dusra browser istemal karne se nayi UID ban jayegi; aisa ho to nayi UID dobara rules me dalni hogi.</p>
   </div>
 
@@ -404,14 +405,40 @@ function loadPinHash() {
       storedPinHash = snap.val();
       showPinMode();
     })
-    .catch(function () {
+    .catch(function (err) {
+      window.__lastPinErr = (err && (err.code || err.message)) ? (err.code || err.message) : 'unknown';
       if (pinTries < 8) {
         setTimeout(loadPinHash, 4000);
       } else {
-        $('pinLoading').textContent = 'Database se rabta nahi ho saka. Internet slow ho to thora ruk kar dobara koshish karein.';
+        $('pinLoading').textContent = 'Database se rabta nahi ho saka. Internet slow ho to thora ruk kar dobara koshish karein. [' + window.__lastPinErr + ']';
         $('pinRetry').style.display = 'block';
       }
     });
+}
+
+/* One-time transport self-test (added after repeated connection failures on
+   the clinic networks): separates "database host unreachable from this
+   network" from "rules/permission" — results land in the Setup info box so
+   a screenshot shows the real cause. REST = plain HTTPS read of the public
+   clinicInfo node; SDK = the same read through the Firebase client. */
+function selfTest() {
+  var box = $('diagBox');
+  if (!box || !db) return;
+  var rest = 'REST: …', sdk = 'SDK: …';
+  function render() { box.textContent = 'Check — ' + rest + ' · ' + sdk; }
+  render();
+  var t0 = Date.now();
+  var ctrl = ('AbortController' in window) ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 20000) : null;
+  fetch(FIREBASE_CONFIG.databaseURL + '/clinicInfo.json', ctrl ? { signal: ctrl.signal } : {})
+    .then(function () { if (timer) clearTimeout(timer); rest = 'REST OK (' + (Math.round((Date.now() - t0) / 100) / 10) + 's)'; render(); })
+    .catch(function (e) { if (timer) clearTimeout(timer); rest = 'REST FAIL ' + (e && e.name ? e.name : 'error'); render(); });
+  var t1 = Date.now();
+  Promise.race([
+    db.ref('clinicInfo').once('value'),
+    new Promise(function (resolve, reject) { setTimeout(function () { reject(new Error('timeout')); }, 20000); })
+  ]).then(function () { sdk = 'SDK OK (' + (Math.round((Date.now() - t1) / 100) / 10) + 's)'; render(); })
+    .catch(function (e) { sdk = 'SDK FAIL ' + (e && (e.code || e.message) ? (e.code || e.message) : 'error'); render(); });
 }
 
 function unlock() {
@@ -585,6 +612,7 @@ function addPhotoFile(file) {
       if (user) {
         $('uidBox').textContent = user.uid;
         loadPinHash();
+        selfTest();
       } else {
         firebase.auth().signInAnonymously().catch(function () {
           $('uidBox').textContent = 'sign-in failed — internet check karein';
