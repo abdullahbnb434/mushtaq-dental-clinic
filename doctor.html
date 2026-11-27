@@ -407,6 +407,18 @@ function loadPinHash() {
     })
     .catch(function (err) {
       window.__lastPinErr = (err && (err.code || err.message)) ? (err.code || err.message) : 'unknown';
+      /* PERMISSION_DENIED while the UID is on screen almost always means
+         the sign-in TOKEN went stale (expired, refresh blocked on a weak
+         network): public reads still pass, gated reads deny. Force one
+         token refresh per page load and retry before giving up. */
+      if (window.__lastPinErr === 'PERMISSION_DENIED' && !window.__tokenRefreshed && firebase.auth().currentUser) {
+        window.__tokenRefreshed = true;
+        $('pinLoading').textContent = 'Session refresh ho raha hai…';
+        firebase.auth().currentUser.getIdToken(true)
+          .then(function () { pinTries = 0; loadPinHash(); })
+          .catch(function () { setTimeout(loadPinHash, 4000); });
+        return;
+      }
       if (pinTries < 8) {
         setTimeout(loadPinHash, 4000);
       } else {
@@ -424,14 +436,14 @@ function loadPinHash() {
 function selfTest() {
   var box = $('diagBox');
   if (!box || !db) return;
-  var rest = 'REST: …', sdk = 'SDK: …';
-  function render() { box.textContent = 'Check — ' + rest + ' · ' + sdk; }
+  var rest = 'REST: …', sdk = 'SDK: …', waqt = '';
+  function render() { box.textContent = 'Check — ' + rest + ' · ' + sdk + waqt; }
   render();
   var t0 = Date.now();
   var ctrl = ('AbortController' in window) ? new AbortController() : null;
   var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 20000) : null;
   fetch(FIREBASE_CONFIG.databaseURL + '/clinicInfo.json', ctrl ? { signal: ctrl.signal } : {})
-    .then(function () { if (timer) clearTimeout(timer); rest = 'REST OK (' + (Math.round((Date.now() - t0) / 100) / 10) + 's)'; render(); })
+    .then(function (r) { if (timer) clearTimeout(timer); rest = 'REST OK (' + (Math.round((Date.now() - t0) / 100) / 10) + 's)'; var d = r.headers.get('Date'); if (d) { waqt = ' · Phone waqt farq: ' + Math.round((Date.now() - new Date(d).getTime()) / 1000) + 's'; } render(); })
     .catch(function (e) { if (timer) clearTimeout(timer); rest = 'REST FAIL ' + (e && e.name ? e.name : 'error'); render(); });
   var t1 = Date.now();
   Promise.race([
